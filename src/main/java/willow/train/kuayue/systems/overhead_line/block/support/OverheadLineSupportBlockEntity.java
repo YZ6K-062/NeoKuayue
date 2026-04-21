@@ -6,6 +6,7 @@ import com.mojang.math.Quaternion;
 import com.mojang.math.Vector3f;
 import com.mojang.math.Vector3f;
 import com.mojang.math.Vector4f;
+import com.simibubi.create.content.equipment.clipboard.ClipboardCloneable;
 import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 import kasuga.lib.core.create.boundary.ResourcePattle;
@@ -49,7 +50,7 @@ import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
-public class OverheadLineSupportBlockEntity extends SmartBlockEntity implements MenuProvider {
+public class OverheadLineSupportBlockEntity extends SmartBlockEntity implements MenuProvider, ClipboardCloneable {
 
     public record Connection(
             BlockPos absolutePos,
@@ -244,36 +245,59 @@ public class OverheadLineSupportBlockEntity extends SmartBlockEntity implements 
         BlockPos pPos = this.getBlockPos();
         float manualDeg = getRotation();
 
-        PoseStack pose = new PoseStack();
-        pose.translate(pPos.getX(), pPos.getY(), pPos.getZ());
-        pose.translate(BASIC_OFFSET.x, BASIC_OFFSET.y, BASIC_OFFSET.z);
+        Matrix4f matrix = new Matrix4f();
+        matrix.setIdentity();
+        matrix.multiplyWithTranslation(
+                pPos.getX(),
+                pPos.getY(),
+                pPos.getZ()
+        );
+        matrix.multiplyWithTranslation(
+                (float) BASIC_OFFSET.x,
+                (float) BASIC_OFFSET.y,
+                (float) BASIC_OFFSET.z
+        );
+//        PoseStack pose = new PoseStack();
+//        pose.translate(pPos.getX(), pPos.getY(), pPos.getZ());
+//        pose.translate(BASIC_OFFSET.x, BASIC_OFFSET.y, BASIC_OFFSET.z);
 
         if (getBlockState().hasProperty(OverheadLineSupportBlock.FACING)) {
             Direction facing = getBlockState().getValue(OverheadLineSupportBlock.FACING);
-            pose.mulPose(facing.getRotation());
-            pose.mulPose(new Quaternion(-90, -90, 0, true));
+            matrix.multiply(facing.getRotation());
+            matrix.multiply(new Quaternion(-90, -90, 0, true));
+//            pose.mulPose(facing.getRotation());
+//            pose.mulPose(new Quaternion(-90, -90, 0, true));
         }
 
-        pose.mulPose(Vector3f.YP.rotationDegrees(manualDeg * 1.03f));
+        matrix.multiply(Vector3f.YP.rotationDegrees(manualDeg * 1.03f));
+//        pose.mulPose(Vector3f.YP.rotationDegrees(manualDeg * 1.03f));
         float xOff = this.x_offset;
         float yOff = this.y_offset;
         float zOff = this.z_offset;
-        pose.translate(
+
+        matrix.multiplyWithTranslation(
                 -xOff * 1.3f,
                 yOff * 1.3f,
-                -zOff * 1.3f);
+                -zOff * 1.3f
+        );
+//        pose.translate(
+//                -xOff * 1.3f,
+//                yOff * 1.3f,
+//                -zOff * 1.3f);
 
-        Matrix4f m = pose.last().pose();
         List<Vec3> worldPoints = new ArrayList<>(localPoints.size());
         for (Vec3 lp : localPoints) {
-            pose.pushPose();
-            pose.translate(-lp.x, lp.y, -lp.z);
-            Matrix4f tm = pose.last().pose();
+//             pose.pushPose();
+            // pose.translate(-lp.x, lp.y, -lp.z);
+            Matrix4f m = matrix.copy();
+            m.multiplyWithTranslation((float) -lp.x, (float) lp.y, (float) -lp.z);
+            // Matrix4f tm = pose.last().pose();
             Vector4f origin = new Vector4f(0f, 0f, 0f, 1f);
-            origin.transform(tm);
+            // origin.transform(tm);
+            origin.transform(m);
             Vec3 worldPoint = new Vec3(origin.x(), origin.y(), origin.z());
             worldPoints.add(worldPoint);
-            pose.popPose();
+//            pose.popPose();
         }
 
         return worldPoints;
@@ -454,6 +478,15 @@ public class OverheadLineSupportBlockEntity extends SmartBlockEntity implements 
         CompoundTag paletteTag = new CompoundTag();
         palette.write(paletteTag);
         tag.put("ResourcePalette", paletteTag);
+    }
+
+    @Override
+    public void writeSafe(CompoundTag tag) {
+        super.writeSafe(tag);
+        tag.putFloat("x_offset", x_offset);
+        tag.putFloat("y_offset", y_offset);
+        tag.putFloat("z_offset", z_offset);
+        tag.putFloat("rotation", rotation);
     }
 
     @Override
@@ -648,5 +681,41 @@ public class OverheadLineSupportBlockEntity extends SmartBlockEntity implements 
 
     public boolean isWireTypeAllowed(OverheadLineType type){
         return configuration.typePredictor().test(type);
+    }
+
+
+    @Override
+    public String getClipboardKey() {
+        return "overhead_line_support";
+    }
+
+    @Override
+    public boolean writeToClipboard(CompoundTag tag, Direction side) {
+        tag.putFloat("x_offset", x_offset);
+        tag.putFloat("y_offset", y_offset);
+        tag.putFloat("z_offset", z_offset);
+        tag.putFloat("rotation", rotation);
+
+        return true;
+    }
+
+    @Override
+    public boolean readFromClipboard(CompoundTag tag, Player player, Direction side, boolean simulate) {
+        if (!(tag.contains("x_offset") && tag.contains("y_offset") && tag.contains("z_offset") && tag.contains("rotation"))) {
+            return false;
+        }
+
+        if(simulate) {
+            return true;
+        }
+
+        this.x_offset = tag.getFloat("x_offset");
+        this.y_offset = tag.getFloat("y_offset");
+        this.z_offset = tag.getFloat("z_offset");
+        this.rotation = tag.getFloat("rotation");
+
+        this.notifyUpdate();
+        this.onConnectionModification();
+        return true;
     }
 }

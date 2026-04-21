@@ -5,7 +5,6 @@ license="MIT,CC-BY-SA4.0"
 modId="kuayue"
 version="${file.jarVersion}"
 displayName="KuaYue"
-displayURL="http://fairingstudio.com/KuaYue"
 displayURL="https://www.kycraft.cn/#/"
 logoFile="kuayue.jpg"
 credits="苟利国家生死以，岂因祸福避趋之。"
@@ -45,7 +44,7 @@ side="BOTH"
 [[dependencies.kuayue]]
 modId="create"
 mandatory=true
-versionRange="[0.5.1.e,)"
+versionRange="[0.5.1.e,6.0.0)"
 ordering="NONE"
 side="BOTH"
 [[dependencies.kuayue]]

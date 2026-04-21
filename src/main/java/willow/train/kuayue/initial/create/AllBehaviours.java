@@ -1,5 +1,6 @@
 package willow.train.kuayue.initial.create;
 
+import com.simibubi.create.content.trains.bogey.AbstractBogeyBlock;
 import com.simibubi.create.foundation.block.IBE;
 import kasuga.lib.registrations.create.InteractionReg;
 import kasuga.lib.registrations.create.MovementReg;
@@ -7,10 +8,12 @@ import willow.train.kuayue.behaviour.*;
 import willow.train.kuayue.block.panels.block_entity.IContraptionMovementBlockEntity;
 import willow.train.kuayue.block.panels.carport.DF11GChimneyBlock;
 import willow.train.kuayue.block.panels.carport.DF5ChimneyBlock;
+import willow.train.kuayue.block.panels.end_face.CustomRenderedEndfaceBlock;
 import willow.train.kuayue.block.seat.YZSeatBlock;
 import willow.train.kuayue.initial.AllBlocks;
 import willow.train.kuayue.initial.AllElements;
 import willow.train.kuayue.initial.AllTags;
+import willow.train.kuayue.systems.train_extension.conductor.registry.ConductorCandidateRegistry;
 
 public class AllBehaviours {
 
@@ -55,6 +58,29 @@ public class AllBehaviours {
             new InteractionReg<SeatClickBehaviour>("seat_click_behaviour")
                     .behaviour(new SeatClickBehaviour())
                     .statePredicate(state -> (state.getBlock() instanceof YZSeatBlock && state.is(AllTags.MULTI_SEAT_BLOCK.tag())))
+                    .submit(AllElements.testRegistry);
+
+    public static final MovementReg<BogeyOverweightBehavior> BOGEY_OVERWEIGHT_BEHAVIOUR =
+            new MovementReg<BogeyOverweightBehavior>("bogey_overweight_behaviour")
+                    .behaviour(new BogeyOverweightBehavior())
+                    .statePredicate(blockState ->  blockState.getBlock() instanceof AbstractBogeyBlock<?>)
+                    .submit(AllElements.testRegistry);
+
+    public static final InteractionReg<CouplerInteractionBehaviour> COUPLER_INTERACTION_BEHAVIOUR =
+            new InteractionReg<CouplerInteractionBehaviour>("coupler_interaction_behaviour")
+                    .behaviour(new CouplerInteractionBehaviour())
+                    .statePredicate(blockState -> {
+                        if(blockState.getBlock() instanceof CustomRenderedEndfaceBlock) return false;
+                        return ConductorCandidateRegistry.getProvider(blockState) != null;
+                    })
+                    .submit(AllElements.testRegistry);
+
+    public static final InteractionReg<EndfaceMovementBehaviour> END_FACE_MOVEMENT_BEHAVIOUR =
+            new InteractionReg<EndfaceMovementBehaviour>("endface_movement_behaviour")
+                    .behaviour(new EndfaceMovementBehaviour())
+                    .statePredicate(
+                            state -> state.getBlock() instanceof CustomRenderedEndfaceBlock
+                    )
                     .submit(AllElements.testRegistry);
 
     public static void invoke(){}
